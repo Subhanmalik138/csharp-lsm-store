@@ -1,0 +1,22 @@
+## Build outputs
+bin/
+obj/
+out/
+
+## NuGet
+*.nupkg
+*.snupkg
+
+## Runtime data (never commit a live database)
+*.log
+*.sst
+MANIFEST
+MANIFEST.tmp
+
+## OS / editor
+.DS_Store
+Thumbs.db
+.vs/
+.idea/
+*.user
+*.suo
