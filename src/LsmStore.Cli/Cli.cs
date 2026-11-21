@@ -6,7 +6,7 @@ namespace LsmStore.Cli;
 using System.Diagnostics;
 using LsmStore;
 
-public static class Cli
+public static class LsmCli
 {
     public static int Run(string[] args, TextWriter @out, TextWriter err)
     {

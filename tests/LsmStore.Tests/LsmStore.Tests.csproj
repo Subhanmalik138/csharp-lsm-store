@@ -20,4 +20,9 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\LsmStore\LsmStore.csproj" />
+    <ProjectReference Include="..\..\src\LsmStore.Cli\LsmStore.Cli.csproj" />
+  </ItemGroup>
+
 </Project>

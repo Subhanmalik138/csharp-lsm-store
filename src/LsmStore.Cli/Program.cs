@@ -1,3 +1,3 @@
 using LsmStore.Cli;
 
-return Cli.Run(args, Console.Out, Console.Error);
+return LsmCli.Run(args, Console.Out, Console.Error);
