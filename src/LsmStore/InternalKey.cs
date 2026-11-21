@@ -78,7 +78,7 @@ public static class InternalKey
             if (ReferenceEquals(x, y)) return 0;
             if (x is null) return -1;
             if (y is null) return 1;
-            return Compare(x.AsSpan(), y.AsSpan());
+            return InternalKey.Compare(x.AsSpan(), y.AsSpan());
         }
     }
 }
