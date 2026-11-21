@@ -12,9 +12,17 @@ public sealed class WalWriter : IDisposable
 {
     private readonly FileStream _stream;
 
-    public WalWriter(string path)
+    public WalWriter(string path, bool append = false)
     {
-        _stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+        if (append && File.Exists(path))
+        {
+            _stream = new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.Read);
+            _stream.Seek(0, SeekOrigin.End);
+        }
+        else
+        {
+            _stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+        }
     }
 
     public void Append(EntryType type, ulong sequence, byte[] key, byte[] value)

@@ -146,6 +146,31 @@ public sealed class Block
         return null;
     }
 
+    /// <summary>First entry whose key is >= <paramref name="key"/>; null when none.</summary>
+    public KeyValuePair<byte[], byte[]>? Seek(byte[] key, IComparer<byte[]> comparer)
+    {
+        var lo = 0;
+        var hi = _restarts.Length - 1;
+        while (lo < hi)
+        {
+            var mid = (lo + hi + 1) / 2;
+            if (comparer.Compare(KeyAtRestart(mid), key) <= 0) lo = mid;
+            else hi = mid - 1;
+        }
+
+        var offset = _restarts[lo];
+        var lastKey = Array.Empty<byte>();
+        while (offset < _data.Length)
+        {
+            var (k, v, next) = DecodeAt(offset, lastKey);
+            if (comparer.Compare(k, key) >= 0)
+                return new KeyValuePair<byte[], byte[]>(k, v);
+            lastKey = k;
+            offset = next;
+        }
+        return null;
+    }
+
     public IEnumerable<KeyValuePair<byte[], byte[]>> Entries()
     {
         var offset = 0;

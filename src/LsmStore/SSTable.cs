@@ -151,8 +151,6 @@ public sealed class SSTableReader : IDisposable
     private readonly FileStream _file;
     private readonly List<KeyValuePair<byte[], BlockHandle>> _index;
     private readonly ulong _maxSequence;
-    private long _cachedOffset = -1;
-    private Block? _cachedBlock;
 
     public ulong MaxSequence => _maxSequence;
     public string Path { get; }
@@ -222,6 +220,34 @@ public sealed class SSTableReader : IDisposable
         return block.Get(internalKey, comparer);
     }
 
+    /// <summary>Newest version of a user key: (sequence, type, value), or null
+    /// when the key has no entry in this table. A tombstone is returned, not
+    /// hidden — the caller decides that a delete shadows older tables.</summary>
+    public (ulong Sequence, EntryType Type, byte[] Value)? GetUserKey(byte[] userKey)
+    {
+        // A search key with the maximum sequence sorts before every real
+        // version of this user key, so the first entry at or after it is the
+        // newest version (entries are ordered key-asc, sequence-desc).
+        var searchKey = InternalKey.Encode(userKey, ulong.MaxValue, EntryType.Put);
+        var comparer = new InternalKey.Comparer();
+        var lo = 0;
+        var hi = _index.Count - 1;
+        var found = -1;
+        while (lo <= hi)
+        {
+            var mid = (lo + hi) / 2;
+            if (comparer.Compare(_index[mid].Key, searchKey) >= 0) { found = mid; hi = mid - 1; }
+            else lo = mid + 1;
+        }
+        if (found < 0) return null;
+        var block = ReadDataBlock(_index[found].Value);
+        var entry = block.Seek(searchKey, comparer);
+        if (entry is null) return null;
+        var (entryUserKey, sequence, type) = InternalKey.Decode(entry.Value.Key);
+        if (!entryUserKey.SequenceEqual(userKey)) return null;
+        return (sequence, type, entry.Value.Value);
+    }
+
     public IEnumerable<KeyValuePair<byte[], byte[]>> Entries()
     {
         foreach (var (_, handle) in _index)
@@ -234,12 +260,9 @@ public sealed class SSTableReader : IDisposable
 
     private Block ReadDataBlock(BlockHandle handle)
     {
-        if (_cachedBlock is not null && _cachedOffset == handle.Offset)
-            return _cachedBlock;
-        var block = ReadBlock(_file, handle);
-        _cachedOffset = handle.Offset;
-        _cachedBlock = block;
-        return block;
+        // Deliberately no block cache: readers are shared across threads and a
+        // one-entry cache would need locking; the OS page cache absorbs the cost.
+        return ReadBlock(_file, handle);
     }
 
     private static Block ReadBlock(FileStream file, BlockHandle handle)
